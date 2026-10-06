@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Child's Social Experience</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#F5F7FA; --surface:#FFFFFF; --ink:#1C2640; --muted:#5A6580; --line:#D5DBE6; --empty:#EEF1F6; --focus:#2457D6; --sel:#1C2640; --cellText:#10172B;
+  --w-home:#8FB3E8; --w-other:#B9A3E3; --w-school:#F2C14E; --w-program:#F29E4C; --w-extra:#7FD1AE;
+  --w-move:#A9C1C9; --w-indoor:#E78FB3; --w-outdoor:#9CCB6B; --w-else:#C9C9C9;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12172A; --surface:#1A2138; --ink:#E7EBF5; --muted:#A3ADC6; --line:#2E3756; --empty:#232B47; --focus:#7FA3FF; --sel:#FFFFFF;
+}}
+:root[data-theme="dark"]{
+  --bg:#12172A; --surface:#1A2138; --ink:#E7EBF5; --muted:#A3ADC6; --line:#2E3756; --empty:#232B47; --focus:#7FA3FF; --sel:#FFFFFF;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:17px;line-height:1.5}
+main{max-width:1000px;margin:0 auto;padding:2rem 1.25rem 4rem}
+h1{font-size:clamp(1.7rem,4vw,2.4rem);line-height:1.15;margin:0 0 .7rem;letter-spacing:-.01em}
+h2{font-size:1.2rem;margin:2.2rem 0 .6rem}
+p{max-width:66ch;margin:.45rem 0}
+.muted{color:var(--muted)}
+.steps{max-width:66ch;padding-left:1.3rem;margin:.6rem 0 0}
+.steps li{margin:.25rem 0}
+.legend{display:flex;flex-wrap:wrap;gap:.4rem .9rem;margin:1.4rem 0 .7rem;font-size:.88rem}
+.legend span{display:inline-flex;align-items:center;gap:.4rem}
+.dot{width:14px;height:14px;border-radius:4px;flex:none}
+.gridwrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.75rem}
+.grid{display:grid;grid-template-columns:58px repeat(7,minmax(52px,1fr));gap:3px;touch-action:none;user-select:none;-webkit-user-select:none;min-width:450px}
+.dayhead{text-align:center;font-weight:700;font-size:.9rem;padding:.2rem 0 .35rem}
+.hour{font-size:.78rem;color:var(--muted);text-align:right;padding-right:.4rem;align-self:center}
+.cell{height:32px;border-radius:5px;background:var(--empty);border:none;padding:0 2px;cursor:crosshair;font:inherit;font-size:.68rem;font-weight:700;color:var(--cellText);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.cell.sel{outline:3px solid var(--sel);outline-offset:-3px}
+.cell.unsure{background-image:repeating-linear-gradient(45deg,transparent 0 5px,rgba(255,255,255,.45) 5px 8px)}
+.cell:focus-visible,.btn:focus-visible,input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.actions{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem}
+.btn{font:inherit;font-size:.95rem;padding:.6rem 1rem;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.btn.danger{color:#C0392B}
+.progress{height:10px;background:var(--empty);border-radius:5px;overflow:hidden;margin-top:.5rem;max-width:420px}
+.progress span{display:block;height:100%;background:var(--ink);transition:width .2s}
+textarea{width:100%;min-height:150px;font:13px/1.4 ui-monospace,Menlo,Consolas,monospace;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:.7rem}
+
+dialog{border:none;border-radius:16px;padding:0;width:min(560px,94vw);max-height:90vh;background:var(--surface);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(15,20,35,.55)}
+.dlg-head{position:sticky;top:0;background:var(--surface);padding:1.1rem 1.3rem .7rem;border-bottom:1px solid var(--line);z-index:1}
+.dlg-head h3{margin:0;font-size:1.2rem}
+.dlg-body{padding:.4rem 1.3rem 1rem;overflow-y:auto}
+.dlg-foot{position:sticky;bottom:0;background:var(--surface);padding:.8rem 1.3rem 1rem;border-top:1px solid var(--line);display:flex;gap:.6rem;flex-wrap:wrap;justify-content:space-between}
+fieldset{border:none;padding:0;margin:1.1rem 0 0}
+legend{font-weight:700;padding:0;margin-bottom:.4rem}
+.hint{font-size:.85rem;color:var(--muted);margin:-.25rem 0 .45rem}
+.opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.3rem}
+.opts.row{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
+.opt{display:flex;align-items:flex-start;gap:.5rem;padding:.4rem .55rem;border:1px solid var(--line);border-radius:9px;font-size:.93rem;cursor:pointer}
+.opt input{margin-top:.25rem;accent-color:var(--ink)}
+.opt:has(input:checked){border-color:var(--ink);background:var(--empty)}
+.err{color:#C0392B;font-size:.9rem;min-height:1.2em;margin:.6rem 0 0}
+.hidden{display:none}
+.whoitem{border:1px solid var(--line);border-radius:9px;padding:.4rem .55rem}
+.whoitem:has(>label input:checked){border-color:var(--ink);background:var(--empty)}
+.whoitem>label{display:flex;gap:.5rem;align-items:flex-start;cursor:pointer;font-size:.93rem}
+.whoitem>label input{margin-top:.25rem;accent-color:var(--ink)}
+.counts{display:flex;flex-wrap:wrap;gap:.4rem;margin:.45rem 0 .15rem 1.6rem;align-items:center;font-size:.88rem}
+.counts label{display:inline-flex;gap:.3rem;align-items:center;padding:.2rem .6rem;border:1px solid var(--line);border-radius:999px;background:var(--surface);cursor:pointer}
+.counts label:has(input:checked){border-color:var(--ink);font-weight:700}
+.counts input{accent-color:var(--ink)}
+.addrow{display:flex;gap:.4rem;margin-top:.45rem;flex-wrap:wrap}
+.addrow input{flex:1 1 200px;font:inherit;font-size:.93rem;padding:.45rem .6rem;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink)}
+.chaos{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.4rem 1rem 1rem;max-width:760px}
+.citem{padding:.9rem 0;border-bottom:1px solid var(--line)}
+.citem:last-child{border-bottom:none}
+.citem p{margin:0 0 .5rem;font-weight:700}
+.likert{display:grid;grid-template-columns:auto repeat(5,minmax(36px,52px)) auto;gap:.3rem;align-items:center;font-size:.8rem;color:var(--muted)}
+.likert label{display:flex;flex-direction:column;align-items:center;gap:.1rem;cursor:pointer;color:var(--ink);font-size:.8rem}
+.likert input{width:20px;height:20px;accent-color:var(--ink);margin:0}
+.likert .end{max-width:7.5em;line-height:1.2}
+.likert .end.r{text-align:right}
+@media (max-width:520px){.likert{grid-template-columns:repeat(5,1fr)}.likert .end{grid-row:2}.likert .end.l{grid-column:1/3}.likert .end.r{grid-column:4/6}}
+
+</style>
+</head>
+<body>
+<main>
+  <h1>Child's Social Experience</h1>
+  <p>We want to know about your child's social experience throughout a typical school week.</p>
+  <ol class="steps">
+    <li>In the calendar below, show the types of social activities your child is involved in.</li>
+    <li>Drag across a stretch of time and tell us what they are doing during it.</li>
+  </ol>
+
+  <div class="legend" id="legend" aria-label="Colour key for places"></div>
+  <div class="gridwrap"><div class="grid" id="grid" aria-label="Weekly schedule, 6 am to 10 pm"></div></div>
+  <div class="actions">
+    <button class="btn" id="copyMon">Copy Monday to Tuesday–Friday</button>
+    <button class="btn danger" id="clear">Clear everything</button>
+  </div>
+  <p id="filled" class="muted" style="margin-top:1rem"></p>
+  <div class="progress"><span id="bar" style="width:0"></span></div>
+
+  <h2>About your home</h2>
+  <p>How true is each statement about your home?</p>
+  <div class="chaos" id="chaos"></div>
+
+  <h2>Response data</h2>
+  <p class="muted">Draft only. Downloads every hour of the calendar plus the home questions as one CSV file.</p>
+  <div class="actions"><button class="btn primary" id="export">Export data (CSV)</button></div>
+  <p class="muted" id="exportMsg" role="status"></p>
+</main>
+
+<dialog id="dlg" aria-labelledby="dlgTitle">
+  <form id="f" novalidate>
+    <div class="dlg-head"><h3 id="dlgTitle"></h3></div>
+    <div class="dlg-body">
+      <fieldset><legend>Where is your child, most of this time?</legend><div class="opts" id="o-where"></div></fieldset>
+      <fieldset><legend>What are they mostly doing?</legend><div class="opts" id="o-what"></div>
+        <div class="addrow"><input id="newAct" type="text" maxlength="40" placeholder="Something else? Type it here" aria-label="Add your own activity"><button type="button" class="btn" id="addAct">Add</button></div>
+      </fieldset>
+      <div id="awake">
+        <fieldset><legend>Who else is usually there?</legend><p class="hint">Pick all that apply, then choose how many.</p><div class="opts" id="o-who" style="grid-template-columns:1fr"></div></fieldset>
+        <fieldset><legend>Is a TV, radio, or other audio usually on in the background?</legend><div class="opts row" id="o-audio"></div></fieldset>
+        <fieldset><legend>Does your child usually have headphones or earbuds in?</legend><div class="opts row" id="o-phones"></div></fieldset>
+      </div>
+      <fieldset><legend>How sure are you about this time?</legend><div class="opts row" id="o-sure"></div></fieldset>
+      <p class="err" id="err" role="alert"></p>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn danger" id="erase">Clear this time</button>
+      <span style="display:flex;gap:.6rem">
+        <button type="button" class="btn" id="cancel">Cancel</button>
+        <button type="submit" class="btn primary">Save</button>
+      </span>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const VERSION="draft-0.3";
+const WHERE=[
+  ["home","Home","--w-home"],
+  ["other_home","Someone else's home (relative, friend, babysitter)","--w-other"],
+  ["school","School","--w-school"],
+  ["program","Before/after-school program or childcare","--w-program"],
+  ["extracurricular","Sports, lessons, clubs, or place of worship","--w-extra"],
+  ["transit","Getting around (car, bus, walking, biking)","--w-move"],
+  ["indoor_public","Indoor public place (store, restaurant, mall)","--w-indoor"],
+  ["outdoor_public","Outdoor public place (park, playground, neighbourhood)","--w-outdoor"],
+  ["other","Somewhere else","--w-else"]
+];
+const WHAT=[
+  ["sleep","Sleeping","Sleep"],["meal","Meals or snacks","Meal"],["class","School or class time","Class"],
+  ["homework","Homework","Hmwk"],["leisure_reading","Leisure reading","Read"],
+  ["play_others","Playing or hanging out with others","Play+"],
+  ["play_alone","Playing alone","Solo"],["organized","Organized activity (sports, lessons, practice)","Org"],
+  ["screen_watch","Watching screens (TV, YouTube)","TV"],["screen_interactive","Gaming, phone, or tablet","Game"],
+  ["routine","Routines (getting ready, bath, chores)","Rout"],["along","Along for the ride (errands, siblings' activities)","Ride"]
+];
+const custom=[]; // parent-added activities, stored as "custom:<text>"
+const WHO=[
+  ["familiar_adults","Familiar adults (e.g. parents, school teachers, relatives, coaches)"],
+  ["familiar_kids","Familiar kids (e.g. siblings, relatives, friends, classmates, teammates)"],
+  ["unfamiliar_adults","Unfamiliar adults"],
+  ["unfamiliar_kids","Unfamiliar kids (e.g. at the playground)"]
+];
+const COUNTS=[["1","1"],["2 to 4","2–4"],["5 or more","5+"]];
+const YN=[["yes","Yes"],["no","No"]];
+const SURE=[["very","Very sure"],["somewhat","Somewhat"],["guess","Mostly guessing"]];
+const CHAOS=[
+  "It's a real zoo in our home.",
+  "We are usually able to stay on top of things.",
+  "You can't hear yourself think in our home.",
+  "The atmosphere in our home is calm.",
+  "There is usually a television turned on somewhere in our home.",
+  "First thing in the day, we have a regular routine at home."
+];
+const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const DAYFULL=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const HOURS=[...Array(17)].map((_,i)=>i+6);
+const state={}, chaos={};
+const pid=new URLSearchParams(location.search).get("pid")||"";
+const fmt=h=>{const s=h<12||h===24?"am":"pm";return (h%12||12)+" "+s};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function opts(id,list,name,type="radio"){
+  document.getElementById(id).innerHTML=list.map(([v,l])=>
+    `<label class="opt"><input type="${type}" name="${name}" value="${esc(v)}"><span>${esc(l)}</span></label>`).join("");
+}
+function whatList(){return [...WHAT.map(([v,l])=>[v,l]),...custom.map(t=>["custom:"+t,t])]}
+function renderWhat(){const cur=val("what");opts("o-what",whatList(),"what");if(cur){const i=[...f.querySelectorAll('input[name="what"]')].find(x=>x.value===cur);if(i)i.checked=true}}
+function renderWho(){
+  document.getElementById("o-who").innerHTML=WHO.map(([v,l])=>
+    `<div class="whoitem"><label><input type="checkbox" name="who" value="${v}"><span>${l}</span></label>
+     <div class="counts hidden" id="c-${v}"><span class="muted">How many?</span>${COUNTS.map(([cv,cl])=>
+       `<label><input type="radio" name="n_${v}" value="${cv}">${cl}</label>`).join("")}</div></div>`).join("")+
+    `<div class="whoitem"><label><input type="checkbox" name="who" value="nobody"><span>Nobody else</span></label></div>`;
+}
+const f=document.getElementById("f");
+const val=n=>f.querySelector(`input[name="${n}"]:checked`)?.value;
+opts("o-where",WHERE,"where");renderWhat();renderWho();
+opts("o-audio",YN,"audio");opts("o-phones",YN,"headphones");opts("o-sure",SURE,"sure");
+
+document.getElementById("legend").innerHTML=WHERE.map(([,l,c])=>
+  `<span><span class="dot" style="background:var(${c})"></span>${l.split(" (")[0]}</span>`).join("");
+
+// CHAOS
+document.getElementById("chaos").innerHTML=CHAOS.map((q,i)=>
+  `<div class="citem" role="radiogroup" aria-label="${esc(q)}"><p>${i+1}. ${esc(q)}</p><div class="likert">
+   <span class="end l">Definitely untrue</span>
+   ${[1,2,3,4,5].map(n=>`<label><input type="radio" name="chaos_${i+1}" value="${n}" aria-label="${n} of 5">${n}</label>`).join("")}
+   <span class="end r">Definitely true</span></div></div>`).join("");
+document.getElementById("chaos").addEventListener("change",e=>{chaos[e.target.name]=e.target.value});
+
+// grid
+const grid=document.getElementById("grid");
+grid.appendChild(document.createElement("div"));
+DAYS.forEach(d=>{const h=document.createElement("div");h.className="dayhead";h.textContent=d;grid.appendChild(h)});
+const cells={};
+HOURS.forEach(h=>{
+  const l=document.createElement("div");l.className="hour";l.textContent=fmt(h);grid.appendChild(l);
+  DAYS.forEach((d,di)=>{
+    const c=document.createElement("button");
+    c.type="button";c.className="cell";c.dataset.d=di;c.dataset.h=h;
+    c.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();anchor=end=[di,h];openDialog()}};
+    cells[d+"-"+h]=c;grid.appendChild(c);render(c);
+  });
+});
+function whatLabel(v){if(v.startsWith("custom:"))return [v.slice(7),v.slice(7,12)];const a=WHAT.find(x=>x[0]===v);return [a[1],a[2]]}
+function render(c){
+  const k=DAYS[c.dataset.d]+"-"+c.dataset.h, s=state[k];
+  const label=`${DAYFULL[c.dataset.d]} ${fmt(+c.dataset.h)}`;
+  if(!s){c.style.background="";c.textContent="";c.classList.remove("unsure");c.setAttribute("aria-label",label+": not filled in");return}
+  const w=WHERE.find(x=>x[0]===s.where), [al,ab]=whatLabel(s.what);
+  c.style.background=`var(${w[2]})`;c.textContent=ab;
+  c.classList.toggle("unsure",s.sure==="guess");
+  c.setAttribute("aria-label",`${label}: ${w[1]}, ${al}`);
+}
+
+// selection
+let anchor=null,end=null,dragging=false;
+const rect=()=>({d0:Math.min(anchor[0],end[0]),d1:Math.max(anchor[0],end[0]),h0:Math.min(anchor[1],end[1]),h1:Math.max(anchor[1],end[1])});
+const selKeys=()=>{const r=rect(),out=[];for(let d=r.d0;d<=r.d1;d++)for(let h=r.h0;h<=r.h1;h++)out.push(DAYS[d]+"-"+h);return out};
+function showSel(){Object.values(cells).forEach(c=>c.classList.remove("sel"));if(anchor)selKeys().forEach(k=>cells[k].classList.add("sel"))}
+grid.addEventListener("pointerdown",e=>{const c=e.target.closest(".cell");if(!c)return;e.preventDefault();dragging=true;anchor=end=[+c.dataset.d,+c.dataset.h];showSel()});
+window.addEventListener("pointermove",e=>{if(!dragging)return;const el=document.elementFromPoint(e.clientX,e.clientY);
+  if(el&&el.classList&&el.classList.contains("cell")){end=[+el.dataset.d,+el.dataset.h];showSel()}});
+window.addEventListener("pointerup",()=>{if(dragging){dragging=false;openDialog()}});
+
+// dialog
+const dlg=document.getElementById("dlg"),err=document.getElementById("err");
+function title(){const r=rect();const days=r.d0===r.d1?DAYFULL[r.d0]:`${DAYFULL[r.d0]} to ${DAYFULL[r.d1]}`;return `${days}, ${fmt(r.h0)} to ${fmt(r.h1+1)}`}
+function syncCounts(){WHO.forEach(([v])=>{const on=f.querySelector(`input[name="who"][value="${v}"]`).checked;
+  const box=document.getElementById("c-"+v);box.classList.toggle("hidden",!on);if(!on)box.querySelectorAll("input").forEach(i=>i.checked=false)})}
+function check(name,v){const i=[...f.querySelectorAll(`input[name="${name}"]`)].find(x=>x.value===v);if(i)i.checked=true}
+function setVals(s){
+  f.reset();renderWhat();f.querySelectorAll('input[name="what"]').forEach(i=>i.checked=false);
+  if(s){check("where",s.where);check("what",s.what);check("audio",s.background_audio);check("headphones",s.headphones);check("sure",s.sure);
+    if(s.nobody)check("who","nobody");
+    Object.entries(s.who||{}).forEach(([k,n])=>{check("who",k);check("n_"+k,n)});}
+  syncCounts();
+}
+function toggleAwake(){document.getElementById("awake").classList.toggle("hidden",val("what")==="sleep")}
+function openDialog(){document.getElementById("dlgTitle").textContent=title();setVals(selKeys().map(k=>state[k]).find(Boolean));
+  document.getElementById("newAct").value="";toggleAwake();err.textContent="";dlg.showModal()}
+f.addEventListener("change",e=>{
+  if(e.target.name==="what")toggleAwake();
+  if(e.target.name==="who"){
+    const nob=f.querySelector('input[name="who"][value="nobody"]');
+    if(e.target===nob&&nob.checked)f.querySelectorAll('input[name="who"]').forEach(i=>{if(i!==nob)i.checked=false});
+    else if(e.target!==nob&&e.target.checked)nob.checked=false;
+    syncCounts();
+  }
+});
+function addActivity(){
+  const inp=document.getElementById("newAct"),t=inp.value.trim().replace(/\s+/g," ");if(!t)return;
+  const dup=whatList().find(([,l])=>l.toLowerCase()===t.toLowerCase());
+  if(!dup)custom.push(t);
+  renderWhat();check("what",dup?dup[0]:"custom:"+t);inp.value="";toggleAwake();
+}
+document.getElementById("addAct").onclick=addActivity;
+document.getElementById("newAct").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addActivity()}});
+f.addEventListener("submit",e=>{
+  e.preventDefault();
+  const s={where:val("where"),what:val("what")},missing=[];
+  if(!s.where)missing.push("where");if(!s.what)missing.push("what they're doing");
+  if(s.what!=="sleep"){
+    s.nobody=f.querySelector('input[name="who"][value="nobody"]').checked;s.who={};
+    WHO.forEach(([v])=>{if(f.querySelector(`input[name="who"][value="${v}"]`).checked){s.who[v]=val("n_"+v);if(!s.who[v])missing.push("how many "+v.replace("_"," "))}});
+    if(!s.nobody&&!Object.keys(s.who).length)missing.push("who's there");
+    s.background_audio=val("audio");s.headphones=val("headphones");
+    if(!s.background_audio)missing.push("background audio");if(!s.headphones)missing.push("headphones");
+  }
+  s.sure=val("sure");if(!s.sure)missing.push("how sure you are");
+  if(missing.length){err.textContent="Still need an answer for: "+missing.join(", ")+".";return}
+  selKeys().forEach(k=>{state[k]=JSON.parse(JSON.stringify(s));render(cells[k])});
+  close();
+});
+document.getElementById("erase").onclick=()=>{selKeys().forEach(k=>{delete state[k];render(cells[k])});close()};
+document.getElementById("cancel").onclick=close;
+dlg.addEventListener("cancel",e=>{e.preventDefault();close()});
+function close(){dlg.close();anchor=end=null;showSel();update()}
+
+// tools
+document.getElementById("copyMon").onclick=()=>{
+  HOURS.forEach(h=>["Tue","Wed","Thu","Fri"].forEach(d=>{const v=state["Mon-"+h];
+    if(v)state[d+"-"+h]=JSON.parse(JSON.stringify(v));else delete state[d+"-"+h];render(cells[d+"-"+h])}));update();
+};
+document.getElementById("clear").onclick=()=>{if(!confirm("Clear the whole week?"))return;
+  Object.keys(state).forEach(k=>delete state[k]);Object.values(cells).forEach(render);update()};
+function update(){
+  const total=DAYS.length*HOURS.length,filled=Object.keys(state).length;
+  document.getElementById("filled").textContent=`${filled} of ${total} hours filled in.`;
+  document.getElementById("bar").style.width=(filled/total*100)+"%";
+}
+update();
+
+// CSV export: one row per hour; home (CHAOS) answers repeat on every row
+function csv(){
+  const cols=["participant_id","survey_version","day","hour_start","where","activity","activity_custom_text",
+    ...WHO.map(([v])=>v+"_n"),"nobody_else","background_audio","headphones","sure",...CHAOS.map((_,i)=>"chaos_"+(i+1))];
+  const q=v=>{v=v==null?"":String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const rows=[cols.join(",")];
+  DAYS.forEach(d=>HOURS.forEach(h=>{
+    const s=state[d+"-"+h]||{},isC=(s.what||"").startsWith("custom:");
+    const awake=s.what&&s.what!=="sleep";
+    rows.push([pid,VERSION,d,String(h).padStart(2,"0")+":00",s.where,isC?"custom":s.what,isC?s.what.slice(7):"",
+      ...WHO.map(([v])=>awake?(s.who?.[v]||"0"):""),awake?(s.nobody?"yes":"no"):"",s.background_audio,s.headphones,s.sure,
+      ...CHAOS.map((_,i)=>chaos["chaos_"+(i+1)])].map(q).join(","));
+  }));
+  return rows.join("\r\n");
+}
+document.getElementById("export").onclick=async()=>{
+  const msg=document.getElementById("exportMsg"),data=csv();
+  const name=`social_experience_${pid||"participant"}_${new Date().toISOString().slice(0,10)}.csv`;
+  let dl=null;try{if(window.claude&&claude.use)dl=await claude.use("downloads")}catch{}
+  if(dl){try{await dl.save({filename:name,data});msg.textContent="Saved."}catch(e){msg.textContent=e&&e.code==="declined"?"Download cancelled.":"Couldn't save the file here."}return}
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"text/csv"}));a.download=name;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);msg.textContent="Downloaded.";
+};
+</script>
+</body>
+</html>
