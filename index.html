@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Your child's typical school week</title>
+<title>Child's Social Experience</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
@@ -67,16 +67,36 @@ legend{font-weight:700;padding:0;margin-bottom:.4rem}
 .opt:has(input:checked){border-color:var(--ink);background:var(--empty)}
 .err{color:#C0392B;font-size:.9rem;min-height:1.2em;margin:.6rem 0 0}
 .hidden{display:none}
+.whoitem{border:1px solid var(--line);border-radius:9px;padding:.4rem .55rem}
+.whoitem:has(>label input:checked){border-color:var(--ink);background:var(--empty)}
+.whoitem>label{display:flex;gap:.5rem;align-items:flex-start;cursor:pointer;font-size:.93rem}
+.whoitem>label input{margin-top:.25rem;accent-color:var(--ink)}
+.counts{display:flex;flex-wrap:wrap;gap:.4rem;margin:.45rem 0 .15rem 1.6rem;align-items:center;font-size:.88rem}
+.counts label{display:inline-flex;gap:.3rem;align-items:center;padding:.2rem .6rem;border:1px solid var(--line);border-radius:999px;background:var(--surface);cursor:pointer}
+.counts label:has(input:checked){border-color:var(--ink);font-weight:700}
+.counts input{accent-color:var(--ink)}
+.addrow{display:flex;gap:.4rem;margin-top:.45rem;flex-wrap:wrap}
+.addrow input{flex:1 1 200px;font:inherit;font-size:.93rem;padding:.45rem .6rem;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink)}
+.chaos{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.4rem 1rem 1rem;max-width:760px}
+.citem{padding:.9rem 0;border-bottom:1px solid var(--line)}
+.citem:last-child{border-bottom:none}
+.citem p{margin:0 0 .5rem;font-weight:700}
+.likert{display:grid;grid-template-columns:auto repeat(5,minmax(36px,52px)) auto;gap:.3rem;align-items:center;font-size:.8rem;color:var(--muted)}
+.likert label{display:flex;flex-direction:column;align-items:center;gap:.1rem;cursor:pointer;color:var(--ink);font-size:.8rem}
+.likert input{width:20px;height:20px;accent-color:var(--ink);margin:0}
+.likert .end{max-width:7.5em;line-height:1.2}
+.likert .end.r{text-align:right}
+@media (max-width:520px){.likert{grid-template-columns:repeat(5,1fr)}.likert .end{grid-row:2}.likert .end.l{grid-column:1/3}.likert .end.r{grid-column:4/6}}
+
 </style>
 </head>
 <body>
 <main>
-  <h1>Your child's typical school week</h1>
-  <p>We want to know where your child usually is, what they're doing, and who's around them during a normal school week. Not a holiday, sick day, or summer week. This takes about 10 minutes.</p>
+  <h1>Child's Social Experience</h1>
+  <p>We want to know about your child's social experience throughout a typical school week.</p>
   <ol class="steps">
-    <li>Drag across a stretch of time that looks the same (for example, Monday to Friday, 9 am to 3 pm).</li>
-    <li>Answer a few quick questions about that time.</li>
-    <li>Keep going until every hour has a colour. Tap any coloured block to change it.</li>
+    <li>In the calendar below, show the types of social activities your child is involved in.</li>
+    <li>Drag across a stretch of time and tell us what they are doing during it.</li>
   </ol>
 
   <div class="legend" id="legend" aria-label="Colour key for places"></div>
@@ -85,15 +105,17 @@ legend{font-weight:700;padding:0;margin-bottom:.4rem}
     <button class="btn" id="copyMon">Copy Monday to Tuesday–Friday</button>
     <button class="btn danger" id="clear">Clear everything</button>
   </div>
-
-  <h2>Progress</h2>
-  <p id="filled"></p>
+  <p id="filled" class="muted" style="margin-top:1rem"></p>
   <div class="progress"><span id="bar" style="width:0"></span></div>
 
+  <h2>About your home</h2>
+  <p>How true is each statement about your home?</p>
+  <div class="chaos" id="chaos"></div>
+
   <h2>Response data</h2>
-  <p class="muted">Draft only. In the real survey this is sent to the research team automatically and parents never see it.</p>
-  <textarea id="out" readonly aria-label="Response data as JSON"></textarea>
-  <div class="actions"><button class="btn primary" id="copy">Copy data</button></div>
+  <p class="muted">Draft only. Downloads every hour of the calendar plus the home questions as one CSV file.</p>
+  <div class="actions"><button class="btn primary" id="export">Export data (CSV)</button></div>
+  <p class="muted" id="exportMsg" role="status"></p>
 </main>
 
 <dialog id="dlg" aria-labelledby="dlgTitle">
@@ -101,10 +123,11 @@ legend{font-weight:700;padding:0;margin-bottom:.4rem}
     <div class="dlg-head"><h3 id="dlgTitle"></h3></div>
     <div class="dlg-body">
       <fieldset><legend>Where is your child, most of this time?</legend><div class="opts" id="o-where"></div></fieldset>
-      <fieldset><legend>What are they mostly doing?</legend><div class="opts" id="o-what"></div></fieldset>
+      <fieldset><legend>What are they mostly doing?</legend><div class="opts" id="o-what"></div>
+        <div class="addrow"><input id="newAct" type="text" maxlength="40" placeholder="Something else? Type it here" aria-label="Add your own activity"><button type="button" class="btn" id="addAct">Add</button></div>
+      </fieldset>
       <div id="awake">
-        <fieldset><legend>Who else is usually there?</legend><p class="hint">Pick all that apply.</p><div class="opts" id="o-who"></div></fieldset>
-        <fieldset><legend>How much are people talking around your child, but not to them?</legend><p class="hint">For example, adults chatting with each other or other kids talking.</p><div class="opts row" id="o-talk"></div></fieldset>
+        <fieldset><legend>Who else is usually there?</legend><p class="hint">Pick all that apply, then choose how many.</p><div class="opts" id="o-who" style="grid-template-columns:1fr"></div></fieldset>
         <fieldset><legend>Is a TV, radio, or other audio usually on in the background?</legend><div class="opts row" id="o-audio"></div></fieldset>
         <fieldset><legend>Does your child usually have headphones or earbuds in?</legend><div class="opts row" id="o-phones"></div></fieldset>
       </div>
@@ -122,6 +145,7 @@ legend{font-weight:700;padding:0;margin-bottom:.4rem}
 </dialog>
 
 <script>
+const VERSION="draft-0.3";
 const WHERE=[
   ["home","Home","--w-home"],
   ["other_home","Someone else's home (relative, friend, babysitter)","--w-other"],
@@ -135,38 +159,66 @@ const WHERE=[
 ];
 const WHAT=[
   ["sleep","Sleeping","Sleep"],["meal","Meals or snacks","Meal"],["class","School or class time","Class"],
-  ["homework","Homework or reading","Hmwk"],["play_others","Playing or hanging out with others","Play+"],
+  ["homework","Homework","Hmwk"],["leisure_reading","Leisure reading","Read"],
+  ["play_others","Playing or hanging out with others","Play+"],
   ["play_alone","Playing alone","Solo"],["organized","Organized activity (sports, lessons, practice)","Org"],
   ["screen_watch","Watching screens (TV, YouTube)","TV"],["screen_interactive","Gaming, phone, or tablet","Game"],
-  ["routine","Routines (getting ready, bath, chores)","Rout"],["along","Along for the ride (errands, siblings' activities)","Ride"],
-  ["other","Something else","Other"]
+  ["routine","Routines (getting ready, bath, chores)","Rout"],["along","Along for the ride (errands, siblings' activities)","Ride"]
 ];
+const custom=[]; // parent-added activities, stored as "custom:<text>"
 const WHO=[
-  ["parent","Parent or main caregiver"],["household_adults","Other adults who live in the home"],
-  ["household_kids","Siblings or other kids who live in the home"],["familiar_adults","Familiar adults (grandparents, babysitter, coaches)"],
-  ["teachers","Teachers or program staff"],["familiar_kids","Other kids they know (classmates, friends, teammates)"],
-  ["strangers","Strangers"],["nobody","Nobody else"]
+  ["familiar_adults","Familiar adults (e.g. parents, school teachers, relatives, coaches)"],
+  ["familiar_kids","Familiar kids (e.g. siblings, relatives, friends, classmates, teammates)"],
+  ["unfamiliar_adults","Unfamiliar adults"],
+  ["unfamiliar_kids","Unfamiliar kids (e.g. at the playground)"]
 ];
-const TALK=[["none","None"],["some","Some"],["a_lot","A lot"]];
+const COUNTS=[["1","1"],["2 to 4","2–4"],["5 or more","5+"]];
 const YN=[["yes","Yes"],["no","No"]];
 const SURE=[["very","Very sure"],["somewhat","Somewhat"],["guess","Mostly guessing"]];
+const CHAOS=[
+  "It's a real zoo in our home.",
+  "We are usually able to stay on top of things.",
+  "You can't hear yourself think in our home.",
+  "The atmosphere in our home is calm.",
+  "There is usually a television turned on somewhere in our home.",
+  "First thing in the day, we have a regular routine at home."
+];
 const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const DAYFULL=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 const HOURS=[...Array(17)].map((_,i)=>i+6);
-const state={};
+const state={}, chaos={};
+const pid=new URLSearchParams(location.search).get("pid")||"";
 const fmt=h=>{const s=h<12||h===24?"am":"pm";return (h%12||12)+" "+s};
-const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-// options
 function opts(id,list,name,type="radio"){
   document.getElementById(id).innerHTML=list.map(([v,l])=>
-    `<label class="opt"><input type="${type}" name="${name}" value="${v}"><span>${l}</span></label>`).join("");
+    `<label class="opt"><input type="${type}" name="${name}" value="${esc(v)}"><span>${esc(l)}</span></label>`).join("");
 }
-opts("o-where",WHERE,"where");opts("o-what",WHAT,"what");opts("o-who",WHO,"who","checkbox");
-opts("o-talk",TALK,"talk");opts("o-audio",YN,"audio");opts("o-phones",YN,"headphones");opts("o-sure",SURE,"sure");
+function whatList(){return [...WHAT.map(([v,l])=>[v,l]),...custom.map(t=>["custom:"+t,t])]}
+function renderWhat(){const cur=val("what");opts("o-what",whatList(),"what");if(cur){const i=[...f.querySelectorAll('input[name="what"]')].find(x=>x.value===cur);if(i)i.checked=true}}
+function renderWho(){
+  document.getElementById("o-who").innerHTML=WHO.map(([v,l])=>
+    `<div class="whoitem"><label><input type="checkbox" name="who" value="${v}"><span>${l}</span></label>
+     <div class="counts hidden" id="c-${v}"><span class="muted">How many?</span>${COUNTS.map(([cv,cl])=>
+       `<label><input type="radio" name="n_${v}" value="${cv}">${cl}</label>`).join("")}</div></div>`).join("")+
+    `<div class="whoitem"><label><input type="checkbox" name="who" value="nobody"><span>Nobody else</span></label></div>`;
+}
+const f=document.getElementById("f");
+const val=n=>f.querySelector(`input[name="${n}"]:checked`)?.value;
+opts("o-where",WHERE,"where");renderWhat();renderWho();
+opts("o-audio",YN,"audio");opts("o-phones",YN,"headphones");opts("o-sure",SURE,"sure");
 
 document.getElementById("legend").innerHTML=WHERE.map(([,l,c])=>
   `<span><span class="dot" style="background:var(${c})"></span>${l.split(" (")[0]}</span>`).join("");
+
+// CHAOS
+document.getElementById("chaos").innerHTML=CHAOS.map((q,i)=>
+  `<div class="citem" role="radiogroup" aria-label="${esc(q)}"><p>${i+1}. ${esc(q)}</p><div class="likert">
+   <span class="end l">Definitely untrue</span>
+   ${[1,2,3,4,5].map(n=>`<label><input type="radio" name="chaos_${i+1}" value="${n}" aria-label="${n} of 5">${n}</label>`).join("")}
+   <span class="end r">Definitely true</span></div></div>`).join("");
+document.getElementById("chaos").addEventListener("change",e=>{chaos[e.target.name]=e.target.value});
 
 // grid
 const grid=document.getElementById("grid");
@@ -182,88 +234,74 @@ HOURS.forEach(h=>{
     cells[d+"-"+h]=c;grid.appendChild(c);render(c);
   });
 });
-
+function whatLabel(v){if(v.startsWith("custom:"))return [v.slice(7),v.slice(7,12)];const a=WHAT.find(x=>x[0]===v);return [a[1],a[2]]}
 function render(c){
   const k=DAYS[c.dataset.d]+"-"+c.dataset.h, s=state[k];
   const label=`${DAYFULL[c.dataset.d]} ${fmt(+c.dataset.h)}`;
   if(!s){c.style.background="";c.textContent="";c.classList.remove("unsure");c.setAttribute("aria-label",label+": not filled in");return}
-  const w=WHERE.find(x=>x[0]===s.where), a=WHAT.find(x=>x[0]===s.what);
-  c.style.background=`var(${w[2]})`;c.textContent=a[2];
+  const w=WHERE.find(x=>x[0]===s.where), [al,ab]=whatLabel(s.what);
+  c.style.background=`var(${w[2]})`;c.textContent=ab;
   c.classList.toggle("unsure",s.sure==="guess");
-  c.setAttribute("aria-label",`${label}: ${w[1]}, ${a[1]}`);
+  c.setAttribute("aria-label",`${label}: ${w[1]}, ${al}`);
 }
 
 // selection
 let anchor=null,end=null,dragging=false;
-const rect=()=>{
-  const d0=Math.min(anchor[0],end[0]),d1=Math.max(anchor[0],end[0]);
-  const h0=Math.min(anchor[1],end[1]),h1=Math.max(anchor[1],end[1]);
-  return {d0,d1,h0,h1};
-};
+const rect=()=>({d0:Math.min(anchor[0],end[0]),d1:Math.max(anchor[0],end[0]),h0:Math.min(anchor[1],end[1]),h1:Math.max(anchor[1],end[1])});
 const selKeys=()=>{const r=rect(),out=[];for(let d=r.d0;d<=r.d1;d++)for(let h=r.h0;h<=r.h1;h++)out.push(DAYS[d]+"-"+h);return out};
-function showSel(){
-  Object.values(cells).forEach(c=>c.classList.remove("sel"));
-  if(anchor) selKeys().forEach(k=>cells[k].classList.add("sel"));
-}
-grid.addEventListener("pointerdown",e=>{
-  const c=e.target.closest(".cell");if(!c)return;
-  e.preventDefault();dragging=true;anchor=end=[+c.dataset.d,+c.dataset.h];showSel();
-});
-window.addEventListener("pointermove",e=>{
-  if(!dragging)return;
-  const el=document.elementFromPoint(e.clientX,e.clientY);
-  if(el&&el.classList&&el.classList.contains("cell")){end=[+el.dataset.d,+el.dataset.h];showSel()}
-});
+function showSel(){Object.values(cells).forEach(c=>c.classList.remove("sel"));if(anchor)selKeys().forEach(k=>cells[k].classList.add("sel"))}
+grid.addEventListener("pointerdown",e=>{const c=e.target.closest(".cell");if(!c)return;e.preventDefault();dragging=true;anchor=end=[+c.dataset.d,+c.dataset.h];showSel()});
+window.addEventListener("pointermove",e=>{if(!dragging)return;const el=document.elementFromPoint(e.clientX,e.clientY);
+  if(el&&el.classList&&el.classList.contains("cell")){end=[+el.dataset.d,+el.dataset.h];showSel()}});
 window.addEventListener("pointerup",()=>{if(dragging){dragging=false;openDialog()}});
 
 // dialog
-const dlg=document.getElementById("dlg"),f=document.getElementById("f"),err=document.getElementById("err");
-function title(){
-  const r=rect();
-  const days=r.d0===r.d1?DAYFULL[r.d0]:`${DAYFULL[r.d0]} to ${DAYFULL[r.d1]}`;
-  return `${days}, ${fmt(r.h0)} to ${fmt(r.h1+1)}`;
-}
+const dlg=document.getElementById("dlg"),err=document.getElementById("err");
+function title(){const r=rect();const days=r.d0===r.d1?DAYFULL[r.d0]:`${DAYFULL[r.d0]} to ${DAYFULL[r.d1]}`;return `${days}, ${fmt(r.h0)} to ${fmt(r.h1+1)}`}
+function syncCounts(){WHO.forEach(([v])=>{const on=f.querySelector(`input[name="who"][value="${v}"]`).checked;
+  const box=document.getElementById("c-"+v);box.classList.toggle("hidden",!on);if(!on)box.querySelectorAll("input").forEach(i=>i.checked=false)})}
+function check(name,v){const i=[...f.querySelectorAll(`input[name="${name}"]`)].find(x=>x.value===v);if(i)i.checked=true}
 function setVals(s){
-  f.reset();if(!s)return;
-  ["where","what","talk","audio","headphones","sure"].forEach(n=>{
-    const v=n==="audio"?s.background_audio:s[n];
-    const i=f.querySelector(`input[name="${n}"][value="${v}"]`);if(i)i.checked=true;
-  });
-  (s.who||[]).forEach(v=>{const i=f.querySelector(`input[name="who"][value="${v}"]`);if(i)i.checked=true});
+  f.reset();renderWhat();f.querySelectorAll('input[name="what"]').forEach(i=>i.checked=false);
+  if(s){check("where",s.where);check("what",s.what);check("audio",s.background_audio);check("headphones",s.headphones);check("sure",s.sure);
+    if(s.nobody)check("who","nobody");
+    Object.entries(s.who||{}).forEach(([k,n])=>{check("who",k);check("n_"+k,n)});}
+  syncCounts();
 }
-function toggleAwake(){
-  const asleep=f.querySelector('input[name="what"]:checked')?.value==="sleep";
-  document.getElementById("awake").classList.toggle("hidden",asleep);
-}
-function openDialog(){
-  document.getElementById("dlgTitle").textContent=title();
-  const first=selKeys().map(k=>state[k]).find(Boolean);
-  setVals(first);toggleAwake();err.textContent="";
-  dlg.showModal();
-}
+function toggleAwake(){document.getElementById("awake").classList.toggle("hidden",val("what")==="sleep")}
+function openDialog(){document.getElementById("dlgTitle").textContent=title();setVals(selKeys().map(k=>state[k]).find(Boolean));
+  document.getElementById("newAct").value="";toggleAwake();err.textContent="";dlg.showModal()}
 f.addEventListener("change",e=>{
   if(e.target.name==="what")toggleAwake();
   if(e.target.name==="who"){
     const nob=f.querySelector('input[name="who"][value="nobody"]');
     if(e.target===nob&&nob.checked)f.querySelectorAll('input[name="who"]').forEach(i=>{if(i!==nob)i.checked=false});
     else if(e.target!==nob&&e.target.checked)nob.checked=false;
+    syncCounts();
   }
 });
-const val=n=>f.querySelector(`input[name="${n}"]:checked`)?.value;
+function addActivity(){
+  const inp=document.getElementById("newAct"),t=inp.value.trim().replace(/\s+/g," ");if(!t)return;
+  const dup=whatList().find(([,l])=>l.toLowerCase()===t.toLowerCase());
+  if(!dup)custom.push(t);
+  renderWhat();check("what",dup?dup[0]:"custom:"+t);inp.value="";toggleAwake();
+}
+document.getElementById("addAct").onclick=addActivity;
+document.getElementById("newAct").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addActivity()}});
 f.addEventListener("submit",e=>{
   e.preventDefault();
-  const s={where:val("where"),what:val("what")};
-  const missing=[];
+  const s={where:val("where"),what:val("what")},missing=[];
   if(!s.where)missing.push("where");if(!s.what)missing.push("what they're doing");
   if(s.what!=="sleep"){
-    s.who=[...f.querySelectorAll('input[name="who"]:checked')].map(i=>i.value);
-    s.talk=val("talk");s.background_audio=val("audio");s.headphones=val("headphones");
-    if(!s.who.length)missing.push("who's there");if(!s.talk)missing.push("talking");
+    s.nobody=f.querySelector('input[name="who"][value="nobody"]').checked;s.who={};
+    WHO.forEach(([v])=>{if(f.querySelector(`input[name="who"][value="${v}"]`).checked){s.who[v]=val("n_"+v);if(!s.who[v])missing.push("how many "+v.replace("_"," "))}});
+    if(!s.nobody&&!Object.keys(s.who).length)missing.push("who's there");
+    s.background_audio=val("audio");s.headphones=val("headphones");
     if(!s.background_audio)missing.push("background audio");if(!s.headphones)missing.push("headphones");
   }
   s.sure=val("sure");if(!s.sure)missing.push("how sure you are");
   if(missing.length){err.textContent="Still need an answer for: "+missing.join(", ")+".";return}
-  selKeys().forEach(k=>{state[k]={...s};render(cells[k])});
+  selKeys().forEach(k=>{state[k]=JSON.parse(JSON.stringify(s));render(cells[k])});
   close();
 });
 document.getElementById("erase").onclick=()=>{selKeys().forEach(k=>{delete state[k];render(cells[k])});close()};
@@ -273,26 +311,41 @@ function close(){dlg.close();anchor=end=null;showSel();update()}
 
 // tools
 document.getElementById("copyMon").onclick=()=>{
-  HOURS.forEach(h=>["Tue","Wed","Thu","Fri"].forEach(d=>{
-    const v=state["Mon-"+h];if(v)state[d+"-"+h]={...v};else delete state[d+"-"+h];render(cells[d+"-"+h]);
-  }));update();
+  HOURS.forEach(h=>["Tue","Wed","Thu","Fri"].forEach(d=>{const v=state["Mon-"+h];
+    if(v)state[d+"-"+h]=JSON.parse(JSON.stringify(v));else delete state[d+"-"+h];render(cells[d+"-"+h])}));update();
 };
-document.getElementById("clear").onclick=()=>{
-  if(!confirm("Clear the whole week?"))return;
-  Object.keys(state).forEach(k=>delete state[k]);Object.values(cells).forEach(render);update();
-};
-document.getElementById("copy").onclick=async e=>{
-  try{await navigator.clipboard.writeText(document.getElementById("out").value);e.target.textContent="Copied"}
-  catch{document.getElementById("out").select();e.target.textContent="Select and copy manually"}
-  setTimeout(()=>e.target.textContent="Copy data",1600);
-};
+document.getElementById("clear").onclick=()=>{if(!confirm("Clear the whole week?"))return;
+  Object.keys(state).forEach(k=>delete state[k]);Object.values(cells).forEach(render);update()};
 function update(){
   const total=DAYS.length*HOURS.length,filled=Object.keys(state).length;
-  document.getElementById("filled").textContent=filled===total?"Every hour is filled in. Thank you!":`${filled} of ${total} hours filled in, ${total-filled} to go.`;
+  document.getElementById("filled").textContent=`${filled} of ${total} hours filled in.`;
   document.getElementById("bar").style.width=(filled/total*100)+"%";
-  document.getElementById("out").value=JSON.stringify({survey_version:"draft-0.2",hours_filled:filled,hours_total:total,hours:state},null,2);
 }
 update();
+
+// CSV export: one row per hour; home (CHAOS) answers repeat on every row
+function csv(){
+  const cols=["participant_id","survey_version","day","hour_start","where","activity","activity_custom_text",
+    ...WHO.map(([v])=>v+"_n"),"nobody_else","background_audio","headphones","sure",...CHAOS.map((_,i)=>"chaos_"+(i+1))];
+  const q=v=>{v=v==null?"":String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  const rows=[cols.join(",")];
+  DAYS.forEach(d=>HOURS.forEach(h=>{
+    const s=state[d+"-"+h]||{},isC=(s.what||"").startsWith("custom:");
+    const awake=s.what&&s.what!=="sleep";
+    rows.push([pid,VERSION,d,String(h).padStart(2,"0")+":00",s.where,isC?"custom":s.what,isC?s.what.slice(7):"",
+      ...WHO.map(([v])=>awake?(s.who?.[v]||"0"):""),awake?(s.nobody?"yes":"no"):"",s.background_audio,s.headphones,s.sure,
+      ...CHAOS.map((_,i)=>chaos["chaos_"+(i+1)])].map(q).join(","));
+  }));
+  return rows.join("\r\n");
+}
+document.getElementById("export").onclick=async()=>{
+  const msg=document.getElementById("exportMsg"),data=csv();
+  const name=`social_experience_${pid||"participant"}_${new Date().toISOString().slice(0,10)}.csv`;
+  let dl=null;try{if(window.claude&&claude.use)dl=await claude.use("downloads")}catch{}
+  if(dl){try{await dl.save({filename:name,data});msg.textContent="Saved."}catch(e){msg.textContent=e&&e.code==="declined"?"Download cancelled.":"Couldn't save the file here."}return}
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"text/csv"}));a.download=name;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);msg.textContent="Downloaded.";
+};
 </script>
 </body>
 </html>
