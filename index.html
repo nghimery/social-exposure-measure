@@ -83,6 +83,11 @@ legend{font-weight:700;padding:0}
   <h1>Child's Social Experience</h1>
   <p>We want to know how your child spends their time in a typical week, and who they are usually with.</p>
 
+  <div class="card pad" style="margin-top:1.4rem">
+    <label for="pid" style="font-weight:700;display:block;margin-bottom:.4rem">Participant ID</label>
+    <input type="text" id="pid" maxlength="40" autocomplete="off" style="width:100%;max-width:260px">
+  </div>
+
   <h2><span class="num">1.</span>Sleep schedule</h2>
   <p>What time does your child usually wake up and go to sleep?</p>
   <div class="card pad">
@@ -123,7 +128,7 @@ legend{font-weight:700;padding:0}
 </main>
 
 <script>
-const VERSION="draft-0.4";
+const VERSION="draft-0.5";
 // [key, label, example, ask "who with"?]
 const ACTS=[
   ["school","School","Class time",true],
@@ -138,13 +143,15 @@ const ACTS=[
   ["home","Other time at home","Time at home not listed above",true],
   ["other","Something else","",true]
 ];
+// [key, label, export name]
 const WITH=[
-  ["alone","By themselves"],
-  ["adult_1","1 adult"],
-  ["adult_2plus","2 or more adults"],
-  ["child_1","1 other child"],
-  ["child_2plus","2 or more other children"]
+  ["alone","By themselves","by_themselves"],
+  ["adult_1","1 adult","1_adult"],
+  ["adult_2plus","2 or more adults","2_or_more_adults"],
+  ["child_1","1 other child","1_other_child"],
+  ["child_2plus","2 or more other children","2_or_more_children"]
 ];
+const CHAOS_KEYS=["real_zoo","top_of_things","cant_hear_yourself_think","calm_atmosphere","music_playing","tv_videos_on","morning_routine"];
 const CHAOS=[
   "It's a real zoo in our home.",
   "We are usually able to stay on top of things.",
@@ -154,7 +161,7 @@ const CHAOS=[
   "There is usually television/videos turned on somewhere in our home.",
   "First thing in the day, we have a regular routine at home."
 ];
-const pid=new URLSearchParams(location.search).get("pid")||"";
+const pidFromUrl=new URLSearchParams(location.search).get("pid")||"";
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const $=id=>document.getElementById(id);
 const hours={}, withSel={}, withHrs={}, chaos={};
@@ -236,28 +243,40 @@ $("chaos").innerHTML=CHAOS.map((q,i)=>
    <span class="end r">Definitely true</span></div></div>`).join("");
 $("chaos").addEventListener("change",e=>{chaos[e.target.name]=e.target.value});
 
+$("pid").value=pidFromUrl;
 renderWith();renderWithHrs();updateTotal();
 
-// ---- CSV export: one wide row per participant
+// ---- CSV export: long format, one row per answer
+// columns: participant_id, section, measure, response. Unanswered or not applicable = NA.
 function csv(){
-  const ask=ACTS.filter(a=>a[3]).map(a=>a[0]);
-  const cols=["participant_id","survey_version","wake_weekday","sleep_weekday","wake_weekend","sleep_weekend","waking_hrs_week",
-    ...ACTS.map(([k])=>"hrs_"+k),"other_text",
-    ...ask.flatMap(k=>WITH.flatMap(([v])=>["with_"+k+"_"+v,"with_"+k+"_"+v+"_hrs"])),
-    ...CHAOS.map((_,i)=>"chaos_"+(i+1))];
-  const w=wakingWeek();
-  const vals=[pid,VERSION,$("wake_weekday").value,$("sleep_weekday").value,$("wake_weekend").value,$("sleep_weekend").value,w==null?"":fmtH(w),
-    ...ACTS.map(([k])=>hours[k]??""),otherText,
-    ...ask.flatMap(k=>WITH.flatMap(([v])=>{const on=hours[k]>0&&withSel[k].has(v);return [hours[k]>0?(on?1:0):"",on?(withHrs[k][v]??""):""]})),
-    ...CHAOS.map((_,i)=>chaos["chaos_"+(i+1)]??"")];
+  const pid=$("pid").value.trim();
+  const NA="NA", rows=[];
+  const add=(section,measure,response)=>rows.push([pid,section,measure,response==null||response===""?NA:response]);
+  add("meta","survey_version",VERSION);
+  add("sleep_schedule","school_days_wake",$("wake_weekday").value);
+  add("sleep_schedule","school_days_sleep",$("sleep_weekday").value);
+  add("sleep_schedule","weekend_days_wake",$("wake_weekend").value);
+  add("sleep_schedule","weekend_days_sleep",$("sleep_weekend").value);
+  ACTS.forEach(([k])=>add("hours_per_week","hours_per_week_"+k,hours[k]));
+  add("hours_per_week","hours_per_week_other_description",otherText);
+  ACTS.filter(a=>a[3]).forEach(([k])=>{
+    const on=hours[k]>0;
+    WITH.forEach(([v,,name])=>add("participants_"+k,name,on?(withSel[k].has(v)?"checked":"not_checked"):NA));
+  });
+  ACTS.filter(a=>a[3]).forEach(([k])=>{
+    WITH.forEach(([v,,name])=>add("time_with_each_"+k,name,hours[k]>0&&withSel[k].has(v)?withHrs[k][v]:NA));
+  });
+  CHAOS_KEYS.forEach((m,i)=>add("about_your_home",m,chaos["chaos_"+(i+1)]));
   const q=v=>{v=v==null?"":String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
-  return cols.map(q).join(",")+"\r\n"+vals.map(q).join(",");
+  return [["participant_id","section","measure","response"],...rows].map(r=>r.map(q).join(",")).join("\r\n");
 }
 $("export").onclick=()=>{
-  const name=`social_experience_${pid||"participant"}_${new Date().toISOString().slice(0,10)}.csv`;
+  const pid=$("pid").value.trim(),msg=$("exportMsg");
+  if(!pid){msg.textContent="Please enter a participant ID at the top first.";$("pid").focus();return}
+  const name=`social_experience_${pid.replace(/[^\w-]/g,"_")}_${new Date().toISOString().slice(0,10)}.csv`;
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv()],{type:"text/csv"}));a.download=name;
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
-  $("exportMsg").textContent="Downloaded.";
+  msg.textContent="Downloaded.";
 };
 </script>
 </body>
