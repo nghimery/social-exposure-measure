@@ -86,7 +86,10 @@ legend{font-weight:700;padding:0;margin-bottom:.15rem}
 
   <div class="card pad" style="margin-top:1.2rem">
     <label for="pid" style="font-weight:700;display:block;margin-bottom:.4rem">Participant ID</label>
-    <input type="text" id="pid" maxlength="40" autocomplete="off" list="savedIds">
+    <div style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center">
+      <input type="text" id="pid" maxlength="40" autocomplete="off" list="savedIds">
+      <button type="button" class="btn" id="resumeBtn">Load / resume</button>
+    </div>
     <datalist id="savedIds"></datalist>
     <p class="status" id="saveStatus" role="status"></p>
     <div class="banner hidden" id="found" role="alert">
@@ -115,14 +118,24 @@ legend{font-weight:700;padding:0;margin-bottom:.15rem}
   <h2>Response data</h2>
   <p class="muted">Draft only. Answers save automatically on this device as you go. Export downloads them as a CSV file (one row per answer).</p>
   <div class="actions">
-    <button class="btn primary" id="export">Export data (CSV)</button>
-    <button class="btn danger" id="forget">Delete this participant's saved answers from this device</button>
+    <button class="btn primary" id="export">Export this participant (CSV)</button>
+    <button class="btn" id="exportAll">Export ALL saved participants (CSV)</button>
   </div>
   <p class="muted" id="exportMsg" role="status"></p>
+
+  <h2 style="font-size:1.05rem">Backup &amp; restore</h2>
+  <p class="muted">Saved answers live in this browser only. Download a backup regularly. If the browser's storage is ever cleared, restore from the backup to pick up where you left off.</p>
+  <div class="actions">
+    <button class="btn" id="backupBtn">Download full backup (JSON)</button>
+    <button class="btn" id="restoreBtn">Restore from backup</button>
+    <input type="file" id="restoreInput" accept="application/json" class="hidden">
+    <button class="btn danger" id="forget">Delete this participant's saved answers</button>
+  </div>
+  <p class="muted" id="backupMsg" role="status"></p>
 </main>
 
 <script>
-const VERSION="draft-0.6";
+const VERSION="draft-0.7";
 const STORE="sem_v1:";
 
 // ---------- survey content ----------
@@ -275,19 +288,25 @@ $("resume").addEventListener("click",e=>{const b=e.target.closest("[data-id]");i
 function pidChanged(){
   const pid=$("pid").value.trim();
   $("found").classList.add("hidden");
-  if(!pid){activePid=null;status(NEED_ID);renderResume();return}
+  // switching away from a participant: flush their answers first, they stay saved under their own ID
+  const switching=activePid&&activePid!==pid;
+  if(switching){clearTimeout(saveTimer);saveNow()}
+  if(!pid){activePid=null;setAnswers({});status(NEED_ID);renderResume();return}
   if(pid===activePid)return;
   clearTimeout(saveTimer);
   const rec=readSaved(pid);
   if(rec&&!isEmpty(rec.answers)){
-    if(isEmpty(getAnswers())){loadPid(pid,rec);return}
+    if(switching||isEmpty(getAnswers())){loadPid(pid,rec);return}
+    // answers were typed before any ID was entered: ask before replacing either set
     activePid=null;
     $("foundMsg").textContent=`There are saved answers for participant ${pid} on this device (last saved ${when(rec.savedAt)}).`;
     $("found").classList.remove("hidden");
     status("Saving is paused until you choose below.");
     return;
   }
+  if(switching)setAnswers({}); // new participant starts with a blank form
   activePid=pid;saveNow();
+  status(`New participant ${pid}. Answers will save on this device as you go.`,true);
 }
 function loadPid(pid,rec){
   setAnswers(rec.answers);activePid=pid;$("found").classList.add("hidden");
@@ -306,10 +325,20 @@ $("forget").onclick=()=>{
 };
 
 // ---------- CSV export: long format, one row per answer ----------
-function csv(){
-  const pid=$("pid").value.trim(),a=getAnswers(),rows=[];
+function toCSV(rows){
+  const q=v=>{v=v==null?"":String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  return [["participant_id","section","measure","response"],...rows].map(r=>r.map(q).join(",")).join("\r\n");
+}
+function download(text,name,type){
+  const link=document.createElement("a");link.href=URL.createObjectURL(new Blob([text],{type}));link.download=name;
+  document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(link.href),2000);
+}
+const today=()=>new Date().toISOString().slice(0,10);
+function csv(){return toCSV(rowsFor($("pid").value.trim(),getAnswers()))}
+function rowsFor(pid,a,version=VERSION){
+  const rows=[];
   const add=(section,measure,v)=>rows.push([pid,section,measure,v==null||v===""?"NA":v]);
-  add("meta","survey_version",VERSION);
+  add("meta","survey_version",version);
   SECTIONS.forEach(s=>{
     s.times.forEach(([m])=>add(s.id,m,a[`${s.id}__${m}`]));
     [...ADULTS,...KIDS].forEach(([m])=>add(s.id,"pct_"+m,a[`${s.id}__${m}`]));
@@ -319,18 +348,56 @@ function csv(){
     const v=a["reading__"+m];add("reading",m,v);
     const o=opts.find(o=>o[2]);if(o)add("reading",m+"_text",v===o[0]?a[`reading__${m}_text`]:null);
   });
-  const q=v=>{v=v==null?"":String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
-  return [["participant_id","section","measure","response"],...rows].map(r=>r.map(q).join(",")).join("\r\n");
+  return rows;
 }
 $("export").onclick=()=>{
   const pid=$("pid").value.trim(),msg=$("exportMsg");
   if(!pid){msg.textContent="Please enter a participant ID at the top first.";$("pid").focus();return}
   if(activePid===pid){clearTimeout(saveTimer);saveNow()}
   const bad=form.querySelectorAll(".sum.bad").length;
-  const name=`social_experience_${pid.replace(/[^\w-]/g,"_")}_${new Date().toISOString().slice(0,10)}.csv`;
-  const link=document.createElement("a");link.href=URL.createObjectURL(new Blob([csv()],{type:"text/csv"}));link.download=name;
-  document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(link.href),2000);
+  download(csv(),`social_experience_${pid.replace(/[^\w-]/g,"_")}_${today()}.csv`,"text/csv");
   msg.textContent="Downloaded."+(bad?` Note: ${bad} percentage group${bad>1?"s don't":" doesn't"} add up to 100%.`:"");
+};
+$("exportAll").onclick=()=>{
+  if(activePid){clearTimeout(saveTimer);saveNow()}
+  const ids=savedList().map(([id])=>id).sort(),msg=$("exportMsg");
+  if(!ids.length){msg.textContent="No saved participants on this device yet.";return}
+  const rows=ids.flatMap(id=>{const r=readSaved(id);return r?rowsFor(id,r.answers||{},r.version||VERSION):[]});
+  download(toCSV(rows),`social_experience_ALL_${today()}.csv`,"text/csv");
+  msg.textContent=`Downloaded ${ids.length} participant${ids.length>1?"s":""} in one file.`;
+};
+
+// ---------- backup & restore ----------
+$("backupBtn").onclick=()=>{
+  if(activePid){clearTimeout(saveTimer);saveNow()}
+  const s=store(),backup={},msg=$("backupMsg");
+  try{for(let i=0;i<s.length;i++){const k=s.key(i);if(k&&k.startsWith(STORE))backup[k]=s.getItem(k)}}catch{}
+  const n=Object.keys(backup).length;
+  if(!n){msg.textContent="Nothing saved on this device to back up yet.";return}
+  download(JSON.stringify(backup,null,2),`social_experience_backup_${today()}.json`,"application/json");
+  msg.textContent=`Backup downloaded (${n} participant${n>1?"s":""}).`;
+};
+$("restoreBtn").onclick=()=>$("restoreInput").click();
+$("restoreInput").addEventListener("change",async e=>{
+  const file=e.target.files[0],msg=$("backupMsg");e.target.value="";if(!file)return;
+  try{
+    const backup=JSON.parse(await file.text());
+    const keys=Object.keys(backup).filter(k=>k.startsWith(STORE)&&typeof backup[k]==="string");
+    if(!keys.length){msg.textContent="That file doesn't look like a backup from this survey.";return}
+    const clash=keys.filter(k=>store().getItem(k)!=null).map(k=>k.slice(STORE.length));
+    if(!confirm(`Restore ${keys.length} participant(s) from this backup?`+(clash.length?` This will replace the saved answers for: ${clash.join(", ")}.`:"")))return;
+    keys.forEach(k=>{JSON.parse(backup[k]);store().setItem(k,backup[k])});
+    msg.textContent=`Restored ${keys.length} participant(s).`;
+    if(activePid&&keys.includes(STORE+activePid))loadPid(activePid,readSaved(activePid));
+    renderResume();
+  }catch{msg.textContent="Couldn't read that file. Make sure it's an unedited backup file from this survey."}
+});
+$("resumeBtn").addEventListener("mousedown",e=>e.preventDefault()); // keep focus in the ID box so its change event doesn't fire twice
+$("resumeBtn").onclick=()=>{
+  const pid=$("pid").value.trim();
+  if(!pid){status("Enter a participant ID first.");$("pid").focus();return}
+  if(pid!==activePid){pidChanged();return}
+  status(`Working on ${pid}. Answers are saving on this device.`,true);
 };
 
 // ---------- start ----------
